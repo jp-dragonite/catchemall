@@ -7,6 +7,7 @@ import { artworkUrl, fetchPokemonDetails, type PokemonDetails } from "@/lib/poke
 import { useCollection } from "@/lib/collection";
 import { TypeBadge } from "@/components/TypeBadge";
 import { StatusToggle } from "@/components/StatusToggle";
+import { BuySuggestions } from "@/components/BuySuggestions";
 
 const CONDITIONS: Condition[] = ["mint", "good", "fair", "loved"];
 const fieldClass =
@@ -124,6 +125,8 @@ export function PlushDetail({ plush }: { plush: Plush }) {
               </p>
             )}
           </div>
+
+          <BuySuggestions plush={plush} />
 
           <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
             <h2 className="mb-3 font-semibold">Your details</h2>
