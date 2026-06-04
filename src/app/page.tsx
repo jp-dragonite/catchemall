@@ -1,65 +1,176 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useMemo, useState } from "react";
+import { PLUSHES, PLUSH_LINES, GENERATIONS } from "@/data/plushes";
+import { TYPE_COLORS } from "@/lib/typeColors";
+import { useCollection } from "@/lib/collection";
+import { PlushCard } from "@/components/PlushCard";
+import type { PokemonType } from "@/lib/types";
+
+const ALL_TYPES = Object.keys(TYPE_COLORS) as PokemonType[];
+
+type StatusFilter = "all" | "owned" | "wishlist" | "uncollected";
+type SortKey = "dex" | "name" | "release";
+
+const selectClass =
+  "rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800";
+
+export default function BrowsePage() {
+  const { collection, getEntry, hydrated } = useCollection();
+
+  const [search, setSearch] = useState("");
+  const [type, setType] = useState<PokemonType | "all">("all");
+  const [generation, setGeneration] = useState<number | "all">("all");
+  const [line, setLine] = useState<string | "all">("all");
+  const [status, setStatus] = useState<StatusFilter>("all");
+  const [sort, setSort] = useState<SortKey>("dex");
+
+  const ownedCount = useMemo(
+    () => Object.values(collection).filter((e) => e.status === "owned").length,
+    [collection],
+  );
+  const wishlistCount = useMemo(
+    () => Object.values(collection).filter((e) => e.status === "wishlist").length,
+    [collection],
+  );
+  const pct = Math.round((ownedCount / PLUSHES.length) * 100);
+
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = PLUSHES.filter((p) => {
+      if (q && !p.name.toLowerCase().includes(q)) return false;
+      if (type !== "all" && !p.types.includes(type)) return false;
+      if (generation !== "all" && p.generation !== generation) return false;
+      if (line !== "all" && p.line !== line) return false;
+
+      const entryStatus = getEntry(p.id)?.status;
+      if (status === "owned" && entryStatus !== "owned") return false;
+      if (status === "wishlist" && entryStatus !== "wishlist") return false;
+      if (status === "uncollected" && entryStatus) return false;
+      return true;
+    });
+
+    return filtered.sort((a, b) => {
+      if (sort === "name") return a.name.localeCompare(b.name);
+      if (sort === "release") return b.releaseYear - a.releaseYear;
+      return a.dexId - b.dexId;
+    });
+  }, [search, type, generation, line, status, sort, getEntry]);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div className="flex flex-col gap-5">
+      {/* Collection summary */}
+      <section className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-xl font-bold">Your plush collection</h1>
+            <p className="text-sm text-zinc-500 dark:text-zinc-400">
+              {hydrated ? (
+                <>
+                  <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    {ownedCount}
+                  </span>{" "}
+                  owned ·{" "}
+                  <span className="font-semibold text-amber-600 dark:text-amber-400">
+                    {wishlistCount}
+                  </span>{" "}
+                  on wishlist · {PLUSHES.length} in catalog
+                </>
+              ) : (
+                "Loading your collection…"
+              )}
+            </p>
+          </div>
+          <div className="text-right">
+            <div className="text-2xl font-extrabold tabular-nums">{hydrated ? pct : 0}%</div>
+            <div className="text-xs text-zinc-500 dark:text-zinc-400">complete</div>
+          </div>
+        </div>
+        <div className="mt-3 h-2.5 w-full overflow-hidden rounded-full bg-zinc-200 dark:bg-zinc-700">
+          <div
+            className="h-full rounded-full bg-emerald-500 transition-all"
+            style={{ width: `${hydrated ? pct : 0}%` }}
+          />
+        </div>
+      </section>
+
+      {/* Filters */}
+      <section className="flex flex-wrap items-center gap-2">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name…"
+          className={`${selectClass} flex-1 min-w-[160px]`}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+        <select
+          className={selectClass}
+          value={type}
+          onChange={(e) => setType(e.target.value as PokemonType | "all")}
+        >
+          <option value="all">All types</option>
+          {ALL_TYPES.map((t) => (
+            <option key={t} value={t}>
+              {t[0].toUpperCase() + t.slice(1)}
+            </option>
+          ))}
+        </select>
+        <select
+          className={selectClass}
+          value={generation}
+          onChange={(e) => setGeneration(e.target.value === "all" ? "all" : Number(e.target.value))}
+        >
+          <option value="all">All gens</option>
+          {GENERATIONS.map((g) => (
+            <option key={g} value={g}>
+              Gen {g}
+            </option>
+          ))}
+        </select>
+        <select className={selectClass} value={line} onChange={(e) => setLine(e.target.value)}>
+          <option value="all">All lines</option>
+          {PLUSH_LINES.map((l) => (
+            <option key={l} value={l}>
+              {l}
+            </option>
+          ))}
+        </select>
+        <select
+          className={selectClass}
+          value={status}
+          onChange={(e) => setStatus(e.target.value as StatusFilter)}
+        >
+          <option value="all">All statuses</option>
+          <option value="owned">Owned</option>
+          <option value="wishlist">Wishlist</option>
+          <option value="uncollected">Not collected</option>
+        </select>
+        <select
+          className={selectClass}
+          value={sort}
+          onChange={(e) => setSort(e.target.value as SortKey)}
+        >
+          <option value="dex">Sort: Dex #</option>
+          <option value="name">Sort: Name</option>
+          <option value="release">Sort: Newest</option>
+        </select>
+      </section>
+
+      {/* Results */}
+      <p className="text-sm text-zinc-500 dark:text-zinc-400">
+        Showing {visible.length} of {PLUSHES.length} plushies
+      </p>
+      {visible.length === 0 ? (
+        <div className="rounded-xl border border-dashed border-zinc-300 p-10 text-center text-zinc-500 dark:border-zinc-700">
+          No plushies match those filters.
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+          {visible.map((plush) => (
+            <PlushCard key={plush.id} plush={plush} />
+          ))}
         </div>
-      </main>
+      )}
     </div>
   );
 }
