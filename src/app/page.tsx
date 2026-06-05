@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PLUSHES, PLUSH_LINES, GENERATIONS } from "@/data/plushes";
 import { TYPE_COLORS } from "@/lib/typeColors";
 import { useCollection } from "@/lib/collection";
@@ -15,6 +15,9 @@ type SortKey = "dex" | "name" | "release";
 const selectClass =
   "rounded-md border border-zinc-300 bg-white px-2 py-1.5 text-sm dark:border-zinc-600 dark:bg-zinc-800";
 
+// The catalog has 1,000+ entries — render in pages to stay snappy.
+const PAGE_SIZE = 60;
+
 export default function BrowsePage() {
   const { collection, getEntry, hydrated } = useCollection();
 
@@ -24,6 +27,7 @@ export default function BrowsePage() {
   const [line, setLine] = useState<string | "all">("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [sort, setSort] = useState<SortKey>("dex");
+  const [limit, setLimit] = useState(PAGE_SIZE);
 
   const ownedCount = useMemo(
     () => Object.values(collection).filter((e) => e.status === "owned").length,
@@ -52,10 +56,17 @@ export default function BrowsePage() {
 
     return filtered.sort((a, b) => {
       if (sort === "name") return a.name.localeCompare(b.name);
-      if (sort === "release") return b.releaseYear - a.releaseYear;
+      if (sort === "release") return (b.releaseYear ?? 0) - (a.releaseYear ?? 0);
       return a.dexId - b.dexId;
     });
   }, [search, type, generation, line, status, sort, getEntry]);
+
+  // Reset paging whenever the filtered set changes.
+  useEffect(() => {
+    setLimit(PAGE_SIZE);
+  }, [search, type, generation, line, status, sort]);
+
+  const shown = visible.slice(0, limit);
 
   return (
     <div className="flex flex-col gap-5">
@@ -158,18 +169,34 @@ export default function BrowsePage() {
 
       {/* Results */}
       <p className="text-sm text-zinc-500 dark:text-zinc-400">
-        Showing {visible.length} of {PLUSHES.length} plushies
+        {visible.length === PLUSHES.length
+          ? `${PLUSHES.length} plushies`
+          : `${visible.length} of ${PLUSHES.length} plushies match`}
+        {shown.length < visible.length ? ` · showing first ${shown.length}` : ""}
       </p>
       {visible.length === 0 ? (
         <div className="rounded-xl border border-dashed border-zinc-300 p-10 text-center text-zinc-500 dark:border-zinc-700">
           No plushies match those filters.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {visible.map((plush) => (
-            <PlushCard key={plush.id} plush={plush} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            {shown.map((plush) => (
+              <PlushCard key={plush.id} plush={plush} />
+            ))}
+          </div>
+          {shown.length < visible.length && (
+            <div className="flex justify-center pt-2">
+              <button
+                type="button"
+                onClick={() => setLimit((l) => l + PAGE_SIZE)}
+                className="rounded-md bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-zinc-700 dark:bg-white dark:text-zinc-900 dark:hover:bg-zinc-200"
+              >
+                Load more ({visible.length - shown.length} left)
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

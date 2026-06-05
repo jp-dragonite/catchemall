@@ -41,8 +41,8 @@ export interface Plush {
   line: string;
   /** Human-readable size, e.g. 'Standard (~8 in)'. */
   size: string;
-  /** Year the plush was released. */
-  releaseYear: number;
+  /** Year the plush was released, if known. */
+  releaseYear?: number;
   /** Retail price in USD, if known. */
   retailPrice?: number;
   rarity: Rarity;

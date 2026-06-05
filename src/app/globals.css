@@ -24,3 +24,26 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/* Soft "felt shelf" backdrop that makes the artwork read like a plush toy
+   sitting on a surface, rather than a flat character render. */
+.plush-stage {
+  background:
+    radial-gradient(120% 85% at 50% 15%, #ffffff 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(55% 42% at 50% 96%, rgba(24, 24, 27, 0.12) 0%, rgba(24, 24, 27, 0) 72%),
+    linear-gradient(155deg, #fdeef1 0%, #eef1ff 100%);
+}
+
+@media (prefers-color-scheme: dark) {
+  .plush-stage {
+    background:
+      radial-gradient(120% 85% at 50% 15%, rgba(255, 255, 255, 0.07) 0%, rgba(255, 255, 255, 0) 55%),
+      radial-gradient(55% 42% at 50% 96%, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0) 72%),
+      linear-gradient(155deg, #2b2230 0%, #1d2030 100%);
+  }
+}
+
+/* Pillowy drop shadow so the plush feels rounded and physical. */
+.plush-art {
+  filter: drop-shadow(0 10px 12px rgba(24, 24, 27, 0.22));
+}
